@@ -239,7 +239,7 @@ public class PlayerMovement : MonoBehaviour
 
 
         // [jump single press]
-        if(jumpPressed && isOnGround && !isJump && isHeadBlocked)
+        if(jumpPressed && isOnGround && !isJump && !isHeadBlocked)
         {
             if(isCrouch)
             {
