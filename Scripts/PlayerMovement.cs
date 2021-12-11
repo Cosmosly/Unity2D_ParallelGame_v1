@@ -16,11 +16,14 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float jumpHoldDuration;    // max hold jump time
     [SerializeField] private float crouchJumpBoost;     // addtional jump foce using crouch jump
     [SerializeField] private float jumpTime;            // hom much time holding jump buttom is working
+    [SerializeField] private float hangingJumpForce;    // a force upwards press space while hanging on the wall
 
     [Header("Movement States")]
     [SerializeField] private bool isCrouch;             // Wheather player is crouching or not
     [SerializeField] private bool isOnGround;           // Wheather player is on the ground
     [SerializeField] private bool isJump;               // Wheather player is jumping or not
+    [SerializeField] private bool isHeadBlocked;        // Wheather player's head is touching sth
+    [SerializeField] private bool isHanging;            // Wheather player is hanging on the wall
 
     [Header("Movement Figure")]
     [SerializeField] private float xVelocity;               // determin the force from x axis
@@ -30,18 +33,29 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private Vector2 colliderCrouchOffset;  // box collider's offset when crouching(half original)
 
     [Header("Environment Detection")]
-    public LayerMask groundLayer;
+    public LayerMask groundLayer;                            // the Ground Layer
+    private float footOffset;                                // the distance between two legs
+    private float headClearance;                             // the distance above head                       
+    private float groundDistance;                            // the distance between rb and ground
+    private float playerHeight;                              // the height of the player
+    private float eyeHeight;                                 // the height of the player's eye
+    private float grabDistance;                              // the farest distance player can grab wall
+    private float reachOffset;                               // to determin that above the player has not wall, below the player has wall
+
 
     [Header("Button Detection")]
-    public bool jumpPressed;
-    public bool jumpHeld;
-    public bool crouchHeld;
+    public bool jumpPressed;                                 // when pressed down space
+    public bool jumpHeld;                                    // when held space
+    public bool crouchHeld;                                  // when held s
+    public bool crouchPressed;                               // when pressed s
 
     void Start()
     {
 
         // [Initialize movement parameters]
-        InitializePlayerMovement(8f, 0.3f, 6.3f, 1.9f, 0.1f, 2.5f);
+        InitializePlayerMovement(8f, 0.3f,                 // speed, crouchSpeedDivisor
+            6.3f, 1.9f, 0.1f, 2.5f, 15f,                       // jumpForce, jumpHoldForce, jumpHoldDuration, crouchJumpBoost, hangingJumpForce
+            0.4f, 0.5f, 0.2f, 1.5f, 0.4f, 0.7f);           // footOffset, headClearance, groundDistance, eyeHeight, grabDistance, reachOffset
     }
 
    
@@ -49,11 +63,18 @@ public class PlayerMovement : MonoBehaviour
     {
         // all relative with input button should place in the Update function not in the fixedUpdate
         // [Input button assignment]
-        // press jump one time
+        // press jump one time, you need to do this because the fixUpdate and Update
         if (Input.GetButtonDown("Jump"))
             jumpPressed = true;
+
+        if (Input.GetButtonDown("Crouch"))
+            crouchPressed = true;
+
         jumpHeld = Input.GetButton("Jump");            // held the jump button
+
         crouchHeld = Input.GetButton("Crouch");        // held the crouch button
+
+        
 
 
 
@@ -67,19 +88,27 @@ public class PlayerMovement : MonoBehaviour
         GroundMovement();
         // [Controlling the movement in the mid air]
         MidAirMovement();
+        // back to Update
         if (isJump)
             jumpPressed = false;
+        if (isCrouch)
+            crouchPressed = false;
     }
 
     /*
      * Initialize the parameter
      */
-    public void InitializePlayerMovement(float _speed, float _crouchSpeedDivisor, 
-        float _jumpForce, float _jumpHoldForce, float _jumpHoldDuration, float _crouchJumpBoost)
+    public void InitializePlayerMovement(float _speed, float _crouchSpeedDivisor,
+        float _jumpForce, float _jumpHoldForce, float _jumpHoldDuration, float _crouchJumpBoost, float _hangingJumpForce,
+        float _footOffset, float _headClearance, float _groundDistance, float _eyeHeight, float _grabDistance, float _reachOffset)
     {
+
         // [Get component]
         rb = GetComponent<Rigidbody2D>();
         coll = GetComponent<BoxCollider2D>();
+
+        // [Player State]
+        playerHeight = coll.size.y;
 
         // [Speed parameters]
         speed = _speed;
@@ -90,6 +119,7 @@ public class PlayerMovement : MonoBehaviour
         jumpHoldForce = _jumpHoldForce;
         jumpHoldDuration = _jumpHoldDuration;
         crouchJumpBoost = _crouchJumpBoost;
+        hangingJumpForce = _hangingJumpForce;
 
         // [Crouch setting]
         // store the original stand state
@@ -99,7 +129,13 @@ public class PlayerMovement : MonoBehaviour
         colliderCrouchSize = new Vector2(colliderStandSize.x, colliderStandSize.y * 0.5f);
         colliderCrouchOffset = new Vector2(colliderStandOffset.x, colliderStandOffset.y * 0.5f);
 
-        
+        // [Environment detect]
+        footOffset = _footOffset;
+        headClearance = _headClearance;
+        groundDistance = _groundDistance;
+        eyeHeight = _eyeHeight;
+        grabDistance = _grabDistance;
+        reachOffset = _reachOffset;
     }
 
 
@@ -108,10 +144,41 @@ public class PlayerMovement : MonoBehaviour
      */
      private void PhysicsCheck()
     {
-        //[Check if player is on the ground]
-        if (coll.IsTouchingLayers(groundLayer))
+        RaycastHit2D leftFootCheck = Rb_Raycast(new Vector2(-footOffset, 0), Vector2.down, groundDistance, groundLayer);
+        RaycastHit2D rightFootCheck = Rb_Raycast(new Vector2(footOffset, 0), Vector2.down, groundDistance, groundLayer);
+        RaycastHit2D headCheck = Rb_Raycast(new Vector2(0, playerHeight), Vector2.up, headClearance, groundLayer);
+
+        // [Check if player is on the ground]
+        if (leftFootCheck || rightFootCheck)
             isOnGround = true;
         else isOnGround = false;
+
+        // [Check if player's head is blocked]
+        if (headCheck)
+            isHeadBlocked = true;
+        else isHeadBlocked = false;
+
+        // [Hanging raycast]
+        // direction
+        float playerDirection = transform.localScale.x;             // the 1D direction player is facing
+        Vector2 grabDirection = new Vector2(playerDirection, 0);    // the 2D direction player is facing
+
+        RaycastHit2D playerHeightCheck = Rb_Raycast(new Vector2(footOffset * playerDirection, playerHeight), grabDirection, grabDistance, groundLayer);
+        RaycastHit2D eyeHeightCheck = Rb_Raycast(new Vector2(footOffset * playerDirection, eyeHeight), grabDirection, grabDistance, groundLayer);
+        RaycastHit2D ledgeCheck = Rb_Raycast(new Vector2(reachOffset * playerDirection, playerHeight), Vector2.down, grabDistance, groundLayer);
+
+        if(!isOnGround && rb.velocity.y < 0f && ledgeCheck && eyeHeightCheck && !playerHeightCheck)
+        {
+            // [Let Hanging position be parallel to the top ground]
+            Vector3 pos = transform.position;
+            pos.x += (eyeHeightCheck.distance - 0.05f) * playerDirection;
+            pos.y -= ledgeCheck.distance;
+            transform.position = pos;
+
+            // [Hanging]
+            rb.bodyType = RigidbodyType2D.Static;
+            isHanging = true;
+        }
     }
 
 
@@ -120,12 +187,16 @@ public class PlayerMovement : MonoBehaviour
      */
     private void GroundMovement()
     {
+        // [While Hanging]
+        if (isHanging)
+            return; // do nothing about the GroundMovement
+
         // [Consider crouch-S]
         // if player is in the crouch state, execute crouch movement
         if (crouchHeld && !isCrouch && isOnGround)
             Crouch();
         // if player is in the crouch state and loose the s buttom, player stand up
-        else if (!crouchHeld && isCrouch)
+        else if (!crouchHeld && isCrouch && !isHeadBlocked)
             StandUp();
         else if (!isOnGround && isCrouch)
             StandUp();
@@ -148,10 +219,29 @@ public class PlayerMovement : MonoBehaviour
      */
      private void MidAirMovement()
     {
-        // [jump single press]
-        if(jumpPressed && isOnGround && !isJump)
+        // [Hanging Jump]
+        if (isHanging)
         {
-            if(isCrouch && isOnGround)
+            if (jumpPressed)
+            {
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                rb.AddForce(new Vector2(0f, hangingJumpForce), ForceMode2D.Impulse);
+                isHanging = false;
+                isJump = true;
+            }
+            
+            if (crouchPressed)
+            {
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                isHanging = false;
+            }
+        }
+
+
+        // [jump single press]
+        if(jumpPressed && isOnGround && !isJump && isHeadBlocked)
+        {
+            if(isCrouch)
             {
                 StandUp();
                 rb.AddForce(new Vector2(0, crouchJumpBoost), ForceMode2D.Impulse);
@@ -217,4 +307,21 @@ public class PlayerMovement : MonoBehaviour
         coll.offset = colliderStandOffset;
     }
 
+
+    /*
+     *  Manage Raycast in order to reference rb position state
+     */
+     RaycastHit2D Rb_Raycast(Vector2 offset, Vector2 rayDirection, float length, LayerMask layer)
+    {
+        Vector2 position = transform.position;   // rb's position
+
+        // [generate raycast]
+        RaycastHit2D hit2D = Physics2D.Raycast(position + offset, rayDirection, length, layer);
+        // [draw raycast]
+        Color color = hit2D ? Color.red : Color.green;
+        Debug.DrawRay(position + offset, rayDirection * length, color);
+        
+
+        return hit2D;
+    }
 }
