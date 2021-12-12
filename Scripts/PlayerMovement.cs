@@ -61,6 +61,9 @@ public class PlayerMovement : MonoBehaviour
    
     void Update()
     {
+        if (GameManager.GameOver())
+            return;
+
         // all relative with input button should place in the Update function not in the fixedUpdate
         // [Input button assignment]
         // press jump one time, you need to do this because the fixUpdate and Update

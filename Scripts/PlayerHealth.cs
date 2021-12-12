@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 public class PlayerHealth : MonoBehaviour
 {
     public GameObject deathVFXPrefab;
+    public GameObject deathVFXPrefab2;
     int trapsLayer;
 
     void Start()
@@ -13,22 +14,28 @@ public class PlayerHealth : MonoBehaviour
         trapsLayer = LayerMask.NameToLayer("Traps");
     }
 
+
+    // While player hit the any collider(TrapsLayer) can make them died
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if(collision.gameObject.layer == trapsLayer)
         {
+            // cloud effect
             Instantiate(deathVFXPrefab, transform.position, transform.rotation);
+            //
+            Instantiate(deathVFXPrefab2, transform.position, Quaternion.Euler(0,0,Random.Range(-120,120)));
 
+            // set gameObject inactive
             gameObject.SetActive(false);
 
+            // play death audio
             AudioManager.PlayDeathAudio();
 
-            Invoke("ReloadScene", 2);        // Reload Scene after 2 second
+            // reload the scene
+            GameManager.PlayerDied();
+           
         }
     }
 
-    private void ReloadScene()
-    {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-    }
+    
 }
