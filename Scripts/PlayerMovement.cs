@@ -9,7 +9,7 @@ public class PlayerMovement : MonoBehaviour
     private BoxCollider2D coll;
 
     [Header("Movement Parameters")]
-    [SerializeField] private float speed;               // player speed
+    [SerializeField] private float defaultSpeed;        // player default speed
     [SerializeField] private float crouchSpeedDivisor;  // division the speed when player crouch
     [SerializeField] private float jumpForce;           // basic jump force
     [SerializeField] private float jumpHoldForce;       // additional jump force while holding jump buttom
@@ -19,14 +19,14 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float hangingJumpForce;    // a force upwards press space while hanging on the wall
 
     [Header("Movement States")]
-    [SerializeField] private bool isCrouch;             // Wheather player is crouching or not
-    [SerializeField] private bool isOnGround;           // Wheather player is on the ground
-    [SerializeField] private bool isJump;               // Wheather player is jumping or not
+    [SerializeField] public bool isCrouch;             // Wheather player is crouching or not
+    [SerializeField] public bool isOnGround;           // Wheather player is on the ground
+    [SerializeField] public bool isJump;               // Wheather player is jumping or not
     [SerializeField] private bool isHeadBlocked;        // Wheather player's head is touching sth
-    [SerializeField] private bool isHanging;            // Wheather player is hanging on the wall
+    [SerializeField] public bool isHanging;            // Wheather player is hanging on the wall
 
     [Header("Movement Figure")]
-    [SerializeField] private float xVelocity;               // determin the force from x axis
+    [SerializeField] public float xVelocity;               // determin the force from x axis
     [SerializeField] private Vector2 colliderStandSize;     // original box collider's size
     [SerializeField] private Vector2 colliderStandOffset;   // original box collider's offset
     [SerializeField] private Vector2 colliderCrouchSize;    // box collider's size when crouching(half original)
@@ -111,7 +111,7 @@ public class PlayerMovement : MonoBehaviour
         playerHeight = coll.size.y;
 
         // [Speed parameters]
-        speed = _speed;
+        defaultSpeed = _speed;
         crouchSpeedDivisor = _crouchSpeedDivisor;
 
         // [Jump parameters]
@@ -207,7 +207,7 @@ public class PlayerMovement : MonoBehaviour
         if (isCrouch)
             xVelocity *= crouchSpeedDivisor;
         
-        rb.velocity = new Vector2(xVelocity * speed, rb.velocity.y);
+        rb.velocity = new Vector2(xVelocity * defaultSpeed, rb.velocity.y);
 
         // [Changing facing direction]
         FlipDirection();
@@ -253,6 +253,8 @@ public class PlayerMovement : MonoBehaviour
             jumpTime = Time.time + jumpHoldDuration;
             // [implment force]
             rb.AddForce(new Vector2(0f, jumpForce), ForceMode2D.Impulse); // force is the new vector, mode is impluse a suddent force
+            // [Audio Play]
+            AudioManager.PlayJumpAudio();
         }
         // [held jump button while jumping]
         else if (isJump)
@@ -273,9 +275,9 @@ public class PlayerMovement : MonoBehaviour
     {
         // if -> facing is oringinal, if <- facing opposite, if 0 do nothing
         if (xVelocity < 0)
-            transform.localScale = new Vector2(-1, 1);
+            transform.localScale = new Vector3(-1, 1, 1);
         if (xVelocity > 0)
-            transform.localScale = new Vector2(1, 1);
+            transform.localScale = new Vector3(1, 1, 1);
 
     }
 
