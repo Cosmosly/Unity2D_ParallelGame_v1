@@ -30,10 +30,6 @@ public class GameManager : MonoBehaviour
 
         gameManagerInstance = this;
 
-        // Get the lifeTimes 
-        lifeTimes = 3;
-        UIManager.UpdateLifeUI(gameManagerInstance.lifeTimes);
-
         orbs = new List<Orb>();
 
         DontDestroyOnLoad(this);
@@ -43,9 +39,14 @@ public class GameManager : MonoBehaviour
         if (gameisOver)
             return;
 
+
+        UIManager.UpdateLifeUI(gameManagerInstance.lifeTimes);
         gameTime += Time.deltaTime;
         UIManager.UpdateTimeUI(gameTime);
+        UIManager.UpdateOrbUI(gameManagerInstance.orbs.Count);
     }
+
+   
 
     public static void LifeCount()
     {
@@ -96,10 +97,13 @@ public class GameManager : MonoBehaviour
         gameManagerInstance.fader.FadeOut();
         // [Death number -1]
         // Update the death UI
-        UIManager.UpdateLifeUI(--gameManagerInstance.lifeTimes);
+        if(--gameManagerInstance.lifeTimes >= 0)
+            UIManager.UpdateLifeUI(gameManagerInstance.lifeTimes);
 
         // if enough life to play
         NeedMoreLife();
+
+        
 
         // [Reload Scene after 1.5sec]
         gameManagerInstance.Invoke("RestartScene", 1.5f);
@@ -117,7 +121,10 @@ public class GameManager : MonoBehaviour
     public static void NeedMoreLife()
     {
         while(gameManagerInstance.lifeTimes < 0){
+            // clear orbs
+            gameManagerInstance.orbs.Clear();
             UIManager.UpdateEnoughLifeUI();
+            gameManagerInstance.Invoke("BackToMainMenu", 5f);
             return;
         }
     }
@@ -127,10 +134,29 @@ public class GameManager : MonoBehaviour
         gameManagerInstance.gameisOver = true;
         UIManager.DisplayGameOver();
         AudioManager.PlayerWonAudio();
+        
     }
 
     public static bool GameOver()
     {
         return gameManagerInstance.gameisOver;
     }
+
+    private void BackToMainMenu()
+    {
+        gameManagerInstance.orbs.Clear();
+        gameManagerInstance.gameisOver = false;
+        SceneManager.LoadScene("MainMenu");
+    }
+
+    public static void PassingGameLife(int _gameLifes)
+    {
+        gameManagerInstance.lifeTimes += _gameLifes;
+    }
+
+    public static int ReturenGameLife()
+    {
+        return gameManagerInstance.lifeTimes;
+    }
+    
 }

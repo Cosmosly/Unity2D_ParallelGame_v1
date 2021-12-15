@@ -41,6 +41,7 @@ public class UIManager : MonoBehaviour
     {
         uiManagerInstance.gameoverText.text = "You have run out of Life!" + "\n" + "Gain more life in finishing reality tasks!";
         uiManagerInstance.gameoverText.enabled = true;
+        uiManagerInstance.Invoke("CancelEnoughLifeUI", 5f);
     }
 
     public static void UpdateTimeUI(float time)
@@ -52,6 +53,19 @@ public class UIManager : MonoBehaviour
 
     public static void DisplayGameOver()
     {
+        uiManagerInstance.gameoverText.text = "Congratulations! Level Pass!";
         uiManagerInstance.gameoverText.enabled = true;
+        uiManagerInstance.Invoke("CancelGameOver", 5f);
     }
+
+    private void CancelEnoughLifeUI()
+    {
+        uiManagerInstance.gameoverText.enabled = false;
+    }
+
+    private void CancelGameOver()
+    {
+        uiManagerInstance.gameoverText.enabled = false;
+    }
+   
 }

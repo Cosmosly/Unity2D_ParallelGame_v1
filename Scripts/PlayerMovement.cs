@@ -54,15 +54,14 @@ public class PlayerMovement : MonoBehaviour
 
         // [Initialize movement parameters]
         InitializePlayerMovement(8f, 0.3f,                 // speed, crouchSpeedDivisor
-            6.3f, 1.9f, 0.1f, 2.5f, 15f,                       // jumpForce, jumpHoldForce, jumpHoldDuration, crouchJumpBoost, hangingJumpForce
+            6.3f, 1.9f, 0.1f, 3.5f, 15f,                       // jumpForce, jumpHoldForce, jumpHoldDuration, crouchJumpBoost, hangingJumpForce
             0.4f, 0.5f, 0.2f, 1.5f, 0.4f, 0.7f);           // footOffset, headClearance, groundDistance, eyeHeight, grabDistance, reachOffset
     }
 
    
     void Update()
     {
-        if (GameManager.GameOver())
-            return;
+        
 
         // all relative with input button should place in the Update function not in the fixedUpdate
         // [Input button assignment]
